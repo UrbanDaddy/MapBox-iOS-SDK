@@ -191,4 +191,8 @@ typedef enum : NSUInteger {
 *   @param animated If YES, the change from the current mode to the new mode is animated; otherwise, it is not. This parameter affects only tracking mode changes. Changes to the user location or heading are always animated. */
 - (void)mapView:(RMMapView *)mapView didChangeUserTrackingMode:(RMUserTrackingMode)mode animated:(BOOL)animated;
 
+/** Tells the delegate that the view is being updated.
+ *   @param mapView The map view whose user tracking mode changed.  */
+- (void)drawingMap:(RMMapView *)mapView;
+
 @end

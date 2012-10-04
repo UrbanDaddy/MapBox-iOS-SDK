@@ -1194,6 +1194,14 @@
     [self correctPositionOfAllAnnotations];
 }
 
+-(void)drawRect:(CGRect)rect
+{
+	[super drawRect:rect];
+    
+    if ([self.delegate respondsToSelector:@selector(drawingMap:)])
+        [self.delegate drawingMap:self];
+}
+
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView
 {
     return _tiledLayersSuperview;
