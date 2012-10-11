@@ -83,10 +83,19 @@
     [super dealloc];
 }
 
+- (void)display
+{
+    RMLog(@"%s", __func__);
+    [super display];
+}
+
 #pragma mark -
 
 - (void)updateCirclePathAnimated:(BOOL)animated
 {
+    if (animated) {
+        RMLog(@"%s",__func__);
+    }
     CGPathRelease(circlePath); circlePath = NULL;
 
     CGMutablePathRef newPath = CGPathCreateMutable();

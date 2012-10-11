@@ -451,7 +451,7 @@
 {
 	CGRect bounds = self.bounds;
 
-	return [NSString stringWithFormat:@"MapView at {%.0f,%.0f}-{%.0fx%.0f}", bounds.origin.x, bounds.origin.y, bounds.size.width, bounds.size.height];
+	return [NSString stringWithFormat:@"RMMapView at {%.0f,%.0f}-{%.0fx%.0f}", bounds.origin.x, bounds.origin.y, bounds.size.width, bounds.size.height];
 }
 
 #pragma mark -
@@ -537,6 +537,7 @@
 {
     @synchronized (_zoomDelegateQueue)
     {
+        RMLog(@"%s %d", __func__, [_zoomDelegateQueue operationCount]);
         BOOL flag = wasUserEvent;
 
         if ([_zoomDelegateQueue operationCount] == 0)
@@ -1289,6 +1290,7 @@
 
 - (void)scrollView:(RMMapScrollView *)aScrollView correctedContentOffset:(inout CGPoint *)aContentOffset
 {
+    RMLog(@"%s", __func__);
     if ( ! _constrainMovement)
         return;
 
@@ -1332,6 +1334,7 @@
 
 - (void)scrollView:(RMMapScrollView *)aScrollView correctedContentSize:(inout CGSize *)aContentSize
 {
+    RMLog(@"%s", __func__);
     if ( ! _constrainMovement)
         return;
 
@@ -1354,6 +1357,9 @@
     *aContentSize = CGSizeMake((*aContentSize).width * factor, (*aContentSize).height * factor);
 }
 
+/*
+ Observing "contentOffset"
+ */
 - (void)observeValueForKeyPath:(NSString *)aKeyPath ofObject:(id)anObject change:(NSDictionary *)change context:(void *)context
 {
     NSValue *oldValue = [change objectForKey:NSKeyValueChangeOldKey],
@@ -1362,8 +1368,12 @@
     CGPoint oldContentOffset = [oldValue CGPointValue],
             newContentOffset = [newValue CGPointValue];
 
-    if (CGPointEqualToPoint(oldContentOffset, newContentOffset))
+    RMLog(@"%s contentOffset %@ -> %@",__func__, NSStringFromCGPoint(oldContentOffset), NSStringFromCGPoint(newContentOffset));
+    
+    if (CGPointEqualToPoint(oldContentOffset, newContentOffset)) {
+        RMLog(@"branch no change, do nothing");
         return;
+    }
 
     // The first offset during zooming out (animated) is always garbage
     if (_mapScrollViewIsZooming == YES &&
@@ -1374,6 +1384,7 @@
         _lastContentOffset = _mapScrollView.contentOffset;
         _lastContentSize = _mapScrollView.contentSize;
 
+        RMLog(@"branch ignore bad first offset");
         return;
     }
 
@@ -1399,19 +1410,29 @@
 
         if (fabsf(_accumulatedDelta.x) < kZoomRectPixelBuffer && fabsf(_accumulatedDelta.y) < kZoomRectPixelBuffer)
         {
+            RMLog(@"branch kZoomRectPixelBuffer");
             [_overlayView moveLayersBy:_accumulatedDelta];
             [self performSelector:@selector(correctPositionOfAllAnnotations) withObject:nil afterDelay:0.1];
         }
         else
         {
-            if (_mapScrollViewIsZooming)
+            
+            if (_mapScrollViewIsZooming) {
+                RMLog(@"branch zoom accumulatedDelta");
                 [self correctPositionOfAllAnnotationsIncludingInvisibles:NO animated:YES];
-            else
+
+            }
+                
+            else {
+                RMLog(@"branch non-zoom accumulatedDelta");
                 [self correctPositionOfAllAnnotations];
+            }
         }
     }
     else
     {
+        RMLog(@"branch zoom changing");
+
         [self correctPositionOfAllAnnotationsIncludingInvisibles:NO animated:(_mapScrollViewIsZooming && !_mapScrollView.zooming)];
         _lastZoom = _zoom;
     }
@@ -1558,6 +1579,7 @@
 // defines when the additional pan gesture recognizer on the scroll should handle the gesture
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)recognizer
 {
+    RMLog(@"%s", __func__);
     if ([recognizer isKindOfClass:[UIPanGestureRecognizer class]])
     {
         // check whether our custom pan gesture recognizer should start recognizing the gesture
@@ -1578,6 +1600,7 @@
 
 - (void)handlePanGesture:(UIPanGestureRecognizer *)recognizer
 {
+    RMLog(@"handlePanGesture");
     if (recognizer.state == UIGestureRecognizerStateBegan)
     {
         CALayer *hit = [_overlayView.layer hitTest:[recognizer locationInView:self]];
@@ -2167,7 +2190,10 @@
 	normalizedProjectedPoint.y = projectedPoint.y + fabs(planetBounds.origin.y);
 
     // \bug: There is a rounding error here for high zoom levels
-    CGPoint projectedPixel = CGPointMake((normalizedProjectedPoint.x / _metersPerPixel) - _mapScrollView.contentOffset.x, (_mapScrollView.contentSize.height - (normalizedProjectedPoint.y / _metersPerPixel)) - _mapScrollView.contentOffset.y);
+    CGPoint projectedPixel =
+        CGPointMake(
+                (normalizedProjectedPoint.x / _metersPerPixel) - _mapScrollView.contentOffset.x,
+                (_mapScrollView.contentSize.height - (normalizedProjectedPoint.y / _metersPerPixel)) - _mapScrollView.contentOffset.y);
 
 //    RMLog(@"pointToPixel: {%f,%f} -> {%f,%f}", projectedPoint.x, projectedPoint.y, projectedPixel.x, projectedPixel.y);
 
@@ -2357,6 +2383,8 @@
 
 - (void)correctPositionOfAllAnnotationsIncludingInvisibles:(BOOL)correctAllAnnotations animated:(BOOL)animated
 {
+    RMLog(@"%s", __func__);
+    
     // Prevent blurry movements
     [CATransaction begin];
 

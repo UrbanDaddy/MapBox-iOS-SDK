@@ -78,4 +78,12 @@
 //        return [super actionForKey:key];
 //}
 
+
+- (void)display
+{
+    RMLog(@"%@ %s",self, __func__);
+    
+    [super display];
+}
+
 @end
